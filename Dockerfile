@@ -1,11 +1,12 @@
-FROM golang:1.13-alpine
+FROM golang:1.14 as builder
 
-RUN apk update
-RUN apk add git
-RUN apk add gcc
-RUN apk add libc-dev
+WORKDIR /
+ADD go.mod ./
+RUN go mod download
+ADD . .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o transfermeit .
 
-ADD . /app/
-WORKDIR /app
-RUN go build -o transfermeit .
-CMD ["/app/transfermeit"]
+FROM scratch
+COPY --from=builder /go/src/github.com/maxisme/transfermeit-backend/transfermeit /transfermeit
+WORKDIR /
+ENTRYPOINT ["/transfermeit"]
